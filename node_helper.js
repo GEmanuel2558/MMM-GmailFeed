@@ -10,6 +10,7 @@ module.exports = NodeHelper.create({
   async getFeed (config) {
     try {
       const self = this;
+      Log.info(`[MMM-GmailFeed] Fetching Gmail Atom feed for user: ${config.username}`);
       const feedUrl = "https://mail.google.com/mail/feed/atom";
 
       const response = await fetch(
@@ -28,6 +29,14 @@ module.exports = NodeHelper.create({
       const parser = new xml2js.Parser({trim: true, explicitArray: false});
       const body = await response.text();
       parser.parseString(body, (error_, result) => {
+        if (error_) {
+          Log.error(`[MMM-GmailFeed] XML parse error: ${error_.message}`);
+          self.sendSocketNotification("MMM-GmailFeed_JSON_ERROR", {
+            username: config.username,
+            error: error_.message
+          });
+          return;
+        }
         if (result.feed.entry) {
           if (!Array.isArray(result.feed.entry)) {
             result.feed.entry = [result.feed.entry];
@@ -36,9 +45,8 @@ module.exports = NodeHelper.create({
           result.feed.entry = result.feed.entry.slice(0, config.maxEmails);
         }
 
-        // Log.log("----");
-        // Log.log(JSON.stringify(result.feed, null, 2));
-        // Log.log("----");
+        const entryCount = Array.isArray(result.feed.entry) ? result.feed.entry.length : (result.feed.entry ? 1 : 0);
+        Log.info(`[MMM-GmailFeed] Retrieved ${entryCount} unread item(s) for ${config.username}`);
 
         // Send the json data back with the URL to distinguish it on the receiving port
         self.sendSocketNotification("MMM-GmailFeed_JSON_RESULT", {
@@ -47,7 +55,12 @@ module.exports = NodeHelper.create({
         });
       });
     } catch (error) {
-      Log.error(`Error fetching feed: ${error.message}`);
+      Log.error(`[MMM-GmailFeed] Error fetching feed: ${error.message}`);
+      // Ensure the front-end can react to errors per instance
+      this.sendSocketNotification("MMM-GmailFeed_JSON_ERROR", {
+        username: (config && config.username) || undefined,
+        error: error.message
+      });
     }
   },
 
@@ -55,6 +68,7 @@ module.exports = NodeHelper.create({
   // Subclass socketNotificationReceived received.
   socketNotificationReceived (notification, config) {
     if (notification === "MMM-GmailFeed_GET_JSON") {
+      Log.info(`[MMM-GmailFeed] Request received to fetch feed for ${config && config.username}`);
       this.getFeed(config);
     }
   }
