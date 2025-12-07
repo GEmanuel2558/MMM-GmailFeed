@@ -1,9 +1,15 @@
 "use strict";
 
 Module.register("MMM-GmailFeed", {
+  // Socket notification names centralized to avoid typos
+  N: {
+    GET: "MMM-GmailFeed_GET_JSON",
+    RESULT: "MMM-GmailFeed_JSON_RESULT",
+    ERROR: "MMM-GmailFeed_JSON_ERROR"
+  },
   mailCount: 0,
   jsonData: null,
-  errorData: null,
+  errorData: null, // { message: string, status?: number }
 
   // Default module config.
   defaults: {
@@ -19,7 +25,21 @@ Module.register("MMM-GmailFeed", {
   },
 
   start () {
-    this.getJson();
+    // Basic config validation so we can present helpful UI before first fetch
+    const hasUser = typeof this.config.username === "string" && this.config.username.trim() !== "";
+    const hasPass = this.config.password !== undefined && this.config.password !== null && String(this.config.password).trim() !== "";
+
+    if (!hasUser || !hasPass) {
+      this.jsonData = null;
+      this.errorData = {
+        message: "Configuration incomplete: username or password (App Password) is missing.",
+        status: 0
+      };
+    } else {
+      this.errorData = null;
+      this.getJson();
+    }
+
     this.scheduleUpdate();
   },
 
@@ -42,21 +62,31 @@ Module.register("MMM-GmailFeed", {
 
   // Request node_helper to get json from url
   getJson () {
-    this.sendSocketNotification("MMM-GmailFeed_GET_JSON", this.config);
+    // Only request if critical config seems present
+    const hasUser = typeof this.config.username === "string" && this.config.username.trim() !== "";
+    const hasPass = this.config.password !== undefined && this.config.password !== null && String(this.config.password).trim() !== "";
+    if (!hasUser || !hasPass) {
+      return;
+    }
+    this.sendSocketNotification(this.N.GET, this.config);
   },
 
   socketNotificationReceived (notification, payload) {
     // Only continue if the notification came from the request we made
     // This way we can load the module more than once.
     if (payload.username === this.config.username) {
-      if (notification === "MMM-GmailFeed_JSON_RESULT") {
+      if (notification === this.N.RESULT) {
         this.jsonData = payload.data;
         this.errorData = null;
         this.updateDom(500);
       }
-      if (notification === "MMM-GmailFeed_JSON_ERROR") {
+      if (notification === this.N.ERROR) {
         this.jsonData = null;
-        this.errorData = `Error: [${payload.error}]`;
+        // normalize to structured error for clearer UI handling
+        this.errorData = {
+          message: payload && payload.error ? String(payload.error) : "Unknown error",
+          status: payload && typeof payload.status === "number" ? payload.status : undefined
+        };
         this.updateDom(500);
       }
     }
@@ -67,7 +97,7 @@ Module.register("MMM-GmailFeed", {
     let result;
     if (this.jsonData) {
       if (this.config.playSound && this.jsonData.fullcount > this.mailCount) {
-        new Audio(this.file("eventually.mp3")).play();
+        new Audio(this.file("assets/audio/eventually.mp3")).play();
       }
 
       this.mailCount = this.jsonData.fullcount;
@@ -95,7 +125,12 @@ Module.register("MMM-GmailFeed", {
     table.classList.add("mailtable");
 
     if (this.errorData) {
-      table.innerHTML = this.errorData;
+      const status = this.errorData.status;
+      let msg = this.errorData.message || "An error occurred";
+      if (status === 401) {
+        msg = "Authentication failed (401). Check username/password or App Password.";
+      }
+      table.innerHTML = msg;
       return table;
     }
 
@@ -145,14 +180,10 @@ Module.register("MMM-GmailFeed", {
       z.setAttribute("href", "#");
       z.classList.add("notification");
       const logo = document.createElement("img");
-      if (this.config.color === true) {
-        logo.setAttribute("src", "/modules/MMM-GmailFeed/Gmail-logo.png");
-      } else if (this.config.color === false) {
-        logo.setAttribute(
-          "src",
-          "/modules/MMM-GmailFeed/Gmail-logo-grayscale.png"
-        );
-      }
+      // Use module-relative paths inside assets folder
+      const colorLogo = this.file("assets/images/Gmail-logo.png");
+      const grayLogo = this.file("assets/images/Gmail-logo-grayscale.png");
+      logo.setAttribute("src", this.config.color === true ? colorLogo : grayLogo);
       logo.setAttribute("height", "50px");
       logo.setAttribute("width", "50px");
       const x = document.createElement("span");

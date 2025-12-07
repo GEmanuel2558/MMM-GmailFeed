@@ -10,7 +10,7 @@ module.exports = NodeHelper.create({
   async getFeed (config) {
     try {
       const self = this;
-      Log.info(`[MMM-GmailFeed] Fetching Gmail Atom feed for user: ${config.username}`);
+      Log.info(`[MMM-GmailFeed] Fetching Gmail Atom feed for user: ${config.username} (host: mail.google.com)`);
       const feedUrl = "https://mail.google.com/mail/feed/atom";
 
       const response = await fetch(
@@ -23,7 +23,15 @@ module.exports = NodeHelper.create({
       );
 
       if (!response.ok) {
-        throw new Error(`Error fetching feed: ${response.status}`);
+        const status = response.status;
+        const msg = `Error fetching feed from mail.google.com: HTTP ${status}`;
+        Log.error(`[MMM-GmailFeed] ${msg}`);
+        self.sendSocketNotification("MMM-GmailFeed_JSON_ERROR", {
+          username: config.username,
+          error: status === 401 ? "401 Unauthorized" : msg,
+          status
+        });
+        return;
       }
 
       const parser = new xml2js.Parser({trim: true, explicitArray: false});

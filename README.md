@@ -5,17 +5,17 @@ MMM-GmailFeed is a module for [MagicMirror²](https://github.com/MagicMirrorOrg/
 ## Screenshots
 
 End result:
-![](example1.png)
+![](assets/images/example1.png)
 
 Auto-Hide enabled:
 
 - Mail in inbox:
-  ![](autoHideShown.png)
+  ![](assets/images/autoHideShown.png)
 - No new mail in inbox:
-  ![](autoHideHidden.png)
+  ![](assets/images/autoHideHidden.png)
 
 Notification Mode:
-![](notificationMode.png)
+![](assets/images/notificationMode.png)
 
 ## Installation
 
@@ -25,24 +25,32 @@ cd MMM-GmailFeed
 npm install
 ```
 
+## Requirements
+
+- A Gmail account. If you use 2‑factor authentication (2FA), you must create a Google App Password and use it instead of your normal password.
+- Outbound network access to https://mail.google.com
+- MagicMirror² 2.18+ recommended.
+
 ## Configuration
 
-```javascript
-{
- module: 'MMM-GmailFeed',
- position: 'bottom_bar',
- config: {
-  username: 'yourname@gmail.com',
-  password: 'yourpassword',
-  updateInterval: 60000,
-  maxEmails: 5,
-  maxSubjectLength: 38,
-  maxFromLength: 15,
-  playSound: true,
-  autoHide: true,
-  displayMode: "table",
- }
-}
+```js
+// In your config/config.js, inside the modules: [] array
+const moduleEntry = {
+  module: 'MMM-GmailFeed',
+  position: 'bottom_bar',
+  config: {
+    username: 'yourname@gmail.com',
+    password: 'yourpassword',
+    updateInterval: 60000,
+    maxEmails: 5,
+    maxSubjectLength: 40,
+    maxFromLength: 15,
+    playSound: true,
+    autoHide: true,
+    displayMode: 'table'
+  }
+};
+// Then insert moduleEntry inside the modules array
 ```
 
 ### Config Options
@@ -60,6 +68,22 @@ npm install
 | `displayMode`             | `"table"`       | Display module as `"table"` or `"notification"`.                                                                                                                                                                                                    |
 | `color`                   | `true`          | If `true`, notification icon will be in color, if `false`, notification icon will be in grayscale.                                                                                                                                                  |
 | `showEmailAdressInHeader` | `true`          | Show email adress in header (`true`) or not (`false`).                                                                                                                                                                                              |
+
+## Troubleshooting
+
+- Authentication failed (401)
+  - Symptom in UI: "Authentication failed (401). Check username/password or App Password."
+  - Cause: Wrong password, or App Password missing when 2FA is enabled.
+  - Fix: Create an App Password in your Google Account (Security → App Passwords) and use that in the `password` field.
+
+- Configuration incomplete
+  - Symptom in UI: "Configuration incomplete: username or password (App Password) is missing."
+  - Fix: Ensure both `username` and `password` are provided in your module config.
+
+- No emails showing
+  - The module may show "No New Mail" when the feed has no unread items.
+  - Verify `maxEmails` and that your Gmail account has unread messages.
+  - Temporary network issues will be retried automatically on the next `updateInterval`.
 
 ## Credentials
 
