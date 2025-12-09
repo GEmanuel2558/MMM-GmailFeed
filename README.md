@@ -36,19 +36,19 @@ npm install
 ```js
 // In your config/config.js, inside the modules: [] array
 const moduleEntry = {
-  module: 'MMM-GmailFeed',
-  position: 'bottom_bar',
+  module: "MMM-GmailFeed",
+  position: "bottom_bar",
   config: {
-    username: 'yourname@gmail.com',
-    password: 'yourpassword',
+    username: "yourname@gmail.com",
+    password: "yourpassword",
     updateInterval: 60000,
     maxEmails: 5,
     maxSubjectLength: 40,
     maxFromLength: 15,
     playSound: true,
     autoHide: true,
-    displayMode: 'table'
-  }
+    displayMode: "table",
+  },
 };
 // Then insert moduleEntry inside the modules array
 ```
@@ -72,11 +72,13 @@ const moduleEntry = {
 ## Troubleshooting
 
 - Authentication failed (401)
+
   - Symptom in UI: "Authentication failed (401). Check username/password or App Password."
   - Cause: Wrong password, or App Password missing when 2FA is enabled.
   - Fix: Create an App Password in your Google Account (Security → App Passwords) and use that in the `password` field.
 
 - Configuration incomplete
+
   - Symptom in UI: "Configuration incomplete: username or password (App Password) is missing."
   - Fix: Ensure both `username` and `password` are provided in your module config.
 
